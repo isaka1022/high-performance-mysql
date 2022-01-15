@@ -191,3 +191,51 @@
     - ベンチマークは繰り返し実行されるので正確に再現されるべき
     - テストデータ、システムのセットアップ手順、結果を計測して分析する方法、ウォームアッププラン
 - パラメータと結果を文書化する方法を設計し、実行をその都度綿密に記録すること
+
+### 2.3.2 ベンチマークを実行する時間の長さ
+
+- ベンチマークの実行時間は十分なものでなければならない
+- システムの定常状態は定常状態のシステムを観察する必要がある
+- ほとんどのシステムにはバースタブルキャパ七日を可能にするためのバッファがある
+    - 一部の処理を先送りにすることでスパイク緩和し、ピーク時の遅れを取り戻す機能のこと
+    - 長時間になってストレスにさらされると限界を超えてしまい、短絡的なピークパフォーマンスすら維持できなくなる
+- ベンチマークを実行したままにして、システムが安定し始めたことが確認できるまで観察するとよい
+- 非常によくある間違い
+    - 短いベンチマークをいくつか実行し、その結果からシステムのパフォーマンスに関して結論を引き出そうとする
+
+### 2.3.3 システムのパフォーマンスとステータスを補足する
+
+- テストの対象となるシステム(SUI)に関する情報をできるだけ集める
+- ベンチマーク用のディレクトリと実行ごとに結果を保存するサブディレクトリを作成しておく
+    - なるべくデータをすべて残しておく
+
+```bash
+#! /bin/sh
+
+INTEARVAL=5
+PREFIX=$INTERVAL-sec-status
+RUNFILE=/home/benchmarks/running
+mysql -e 'SHOW GLOBAL VARIABLES' >> mysql-variables
+while test -e $RUNFILE; do
+	file=$(data +%F_%I)
+	sleep=$(data + %s.%N | awk "{print $INTERVAL - (\$1 % $INTERVAL) }")
+	sleep= $sleep
+	ts="$(data + "TS %s.%N %F %T")"
+	loadavg="$(uptime)"
+	echo "$ts $loadavg" >> $PREFIX-$(file)-status
+	mysql -e 'SHOW GLOBAL STATUS' >> $PREFIX-$(file)-status &
+	echo "$ts $loadavg >> $PREFIX-$(file)-innodbstatus
+	mysql -e 'SHOW GLOBAL STATUS' >> $PREFIX-$(file)-innodbstatus &
+	echo "$ts $loadavg >> $PREFIX-$(file)-processlist
+	mysql -e "$ts $loadavg" >> $PREFIX-$(file)-processlist &
+	echo &ts
+done
+echo Exiting because $RUNTIME does not exist.
+```
+
+- イテレーションの感覚が指定されている
+    - 5秒
+- ベンチマークの実行日時に併せてファイルが分割される
+- それぞれ別のタイムスタンプ行で始まる
+- 収集したデータの前処理やフィルタリングは行わない
+- ベンチマークが完了したときにスクリプトを終了させることができる
